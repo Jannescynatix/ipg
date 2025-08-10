@@ -5,7 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
-const fetch = require('node-fetch');
+const fetch = require('node-fetch'); // Stelle sicher, dass dies importiert wird
 
 dotenv.config();
 
@@ -88,7 +88,7 @@ app.post('/api/visit', async (req, res) => {
     let city = 'Unbekannt';
 
     try {
-        // KORRIGIERT: HTTPS anstatt HTTP verwenden
+        // KORRIGIERT: Explizit 'fetch' aus 'node-fetch' verwenden
         const geoResponse = await fetch(`https://ip-api.com/json/${ipAddress}`);
         const geoData = await geoResponse.json();
         if (geoData.status === 'success') {
@@ -97,6 +97,8 @@ app.post('/api/visit', async (req, res) => {
         }
     } catch (geoError) {
         console.error('Fehler beim Abrufen der Geolocation-Daten:', geoError);
+        // Hier ist es sinnvoll, das Ergebnis zurückzugeben, selbst wenn die Geolocation fehlschlägt
+        // So bricht der ganze Prozess nicht ab.
     }
 
     const newVisit = new Visit({ ipAddress, browser, os, device, country, city });
@@ -148,7 +150,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
             { $sort: { count: -1 } }
         ]);
 
-        // NEU: Daten für Browser-Diagramm
         const visitsByBrowser = await Visit.aggregate([
             { $group: {
                     _id: "$browser",
