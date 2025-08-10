@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('total-visits').textContent = data.totalVisits;
             document.getElementById('unique-ips').textContent = data.uniqueIPs;
             document.getElementById('online-users').textContent = data.onlineUsers;
-            document.getElementById('failed-logins').textContent = data.failedLoginCount; // NEU: fehlgeschlagene Logins
+            document.getElementById('failed-logins').textContent = data.failedLoginCount;
 
             const tableBody = document.querySelector('#visit-table tbody');
             tableBody.innerHTML = '';
@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             createVisitsChart(data.visitsByDay);
-            createOSChart(data.visitsByOS); // NEU: Aufruf zum Erstellen des OS-Diagramms
+            createOSChart(data.visitsByOS);
+            createBrowserChart(data.visitsByBrowser); // NEU: Aufruf für Browser-Diagramm
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // NEU: Funktion zum Erstellen des Kreisdiagramms (Betriebssysteme)
+    // Funktion zum Erstellen des Kreisdiagramms (Betriebssysteme)
     const createOSChart = (osData) => {
         const ctx = document.getElementById('osChart').getContext('2d');
         const labels = osData.map(item => item._id);
@@ -118,6 +119,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: labels,
                 datasets: [{
                     label: 'Verwendete Betriebssysteme',
+                    data: counts,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    // NEU: Funktion zum Erstellen des Browser-Diagramms
+    const createBrowserChart = (browserData) => {
+        const ctx = document.getElementById('browserChart').getContext('2d');
+        const labels = browserData.map(item => item._id);
+        const counts = browserData.map(item => item.count);
+
+        if (window.browserChartInstance) {
+            window.browserChartInstance.destroy();
+        }
+
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 206, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 159, 64, 0.7)'
+        ];
+
+        window.browserChartInstance = new Chart(ctx, {
+            type: 'doughnut', // Ein Donut-Diagramm sieht hier gut aus
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Verwendete Browser',
                     data: counts,
                     backgroundColor: backgroundColors,
                     borderWidth: 1

@@ -37,7 +37,6 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }
 });
 
-// NEU: Schema für fehlgeschlagene Login-Versuche
 const failedLoginSchema = new mongoose.mongoose.Schema({
     ipAddress: String,
     username: String,
@@ -89,7 +88,8 @@ app.post('/api/visit', async (req, res) => {
     let city = 'Unbekannt';
 
     try {
-        const geoResponse = await fetch(`http://ip-api.com/json/${ipAddress}`);
+        // KORRIGIERT: HTTPS anstatt HTTP verwenden
+        const geoResponse = await fetch(`https://ip-api.com/json/${ipAddress}`);
         const geoData = await geoResponse.json();
         if (geoData.status === 'success') {
             country = geoData.country;
@@ -108,7 +108,6 @@ app.post('/api/visit', async (req, res) => {
     }
 });
 
-// NEU: Loggt fehlgeschlagene Versuche
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
@@ -141,7 +140,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
             { $sort: { _id: 1 } }
         ]);
 
-        // NEU: Daten für Betriebssystem-Diagramm
         const visitsByOS = await Visit.aggregate([
             { $group: {
                     _id: "$os",
@@ -150,10 +148,18 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
             { $sort: { count: -1 } }
         ]);
 
-        // NEU: Anzahl der fehlgeschlagenen Logins
+        // NEU: Daten für Browser-Diagramm
+        const visitsByBrowser = await Visit.aggregate([
+            { $group: {
+                    _id: "$browser",
+                    count: { $sum: 1 }
+                }},
+            { $sort: { count: -1 } }
+        ]);
+
         const failedLoginCount = await FailedLogin.countDocuments();
 
-        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, failedLoginCount });
+        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, visitsByBrowser, failedLoginCount });
     } catch (error) {
         console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
