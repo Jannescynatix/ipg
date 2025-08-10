@@ -29,6 +29,7 @@ const visitSchema = new mongoose.Schema({
     browser: String,
     os: String,
     device: String,
+    duration: Number, // NEU: Dauer des Besuchs in Sekunden
     timestamp: { type: Date, default: Date.now }
 });
 
@@ -43,9 +44,17 @@ const failedLoginSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// NEU: Schema für erfolgreiche Logins
+const successfulLoginSchema = new mongoose.Schema({
+    ipAddress: String,
+    username: String,
+    timestamp: { type: Date, default: Date.now }
+});
+
 const Visit = mongoose.model('Visit', visitSchema);
 const User = mongoose.model('User', userSchema);
 const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
+const SuccessfulLogin = mongoose.model('SuccessfulLogin', successfulLoginSchema); // NEU: Modell für erfolgreiche Logins
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
@@ -81,7 +90,7 @@ const authenticateToken = (req, res, next) => {
 // ---
 
 app.post('/api/visit', async (req, res) => {
-    const { browser, os, device } = req.body;
+    const { browser, os, device, duration } = req.body; // NEU: duration
     const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     let country = 'Unbekannt';
@@ -98,7 +107,7 @@ app.post('/api/visit', async (req, res) => {
         console.error('Fehler beim Abrufen der Geolocation-Daten:', geoError);
     }
 
-    const newVisit = new Visit({ ipAddress, browser, os, device, country, city });
+    const newVisit = new Visit({ ipAddress, browser, os, device, country, city, duration }); // NEU: duration hinzufügen
     try {
         await newVisit.save();
         res.status(200).send('Besucherdaten gespeichert.');
@@ -118,6 +127,10 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).send('Ungültiger Benutzername oder Passwort.');
     }
 
+    // NEU: Erfolgreichen Login protokollieren
+    const newSuccessfulLogin = new SuccessfulLogin({ ipAddress, username });
+    await newSuccessfulLogin.save();
+
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
 });
@@ -127,6 +140,12 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         const visits = await Visit.find().sort({ timestamp: -1 });
         const totalVisits = await Visit.countDocuments();
         const uniqueIPs = (await Visit.distinct('ipAddress')).length;
+
+        // NEU: Durchschnittliche Besuchsdauer berechnen
+        const totalDuration = await Visit.aggregate([
+            { $group: { _id: null, total: { $sum: "$duration" } } }
+        ]);
+        const avgDuration = totalDuration.length > 0 ? (totalDuration[0].total / totalVisits).toFixed(2) : 0;
 
         const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000);
         const onlineUsers = (await Visit.distinct('ipAddress', { timestamp: { $gte: onlineThreshold } })).length;
@@ -157,20 +176,30 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 
         const failedLoginCount = await FailedLogin.countDocuments();
 
-        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, visitsByBrowser, failedLoginCount });
+        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, visitsByBrowser, failedLoginCount, avgDuration });
     } catch (error) {
         console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });
 
-// NEU: Endpunkt für fehlgeschlagene Logins
 app.get('/api/failed-logins', authenticateToken, async (req, res) => {
     try {
         const failedLogins = await FailedLogin.find().sort({ timestamp: -1 }).limit(10);
         res.json(failedLogins);
     } catch (error) {
         console.error('Fehler beim Abrufen der fehlgeschlagenen Logins:', error);
+        res.status(500).send('Fehler beim Abrufen der Daten.');
+    }
+});
+
+// NEU: Endpunkt für erfolgreiche Logins
+app.get('/api/successful-logins', authenticateToken, async (req, res) => {
+    try {
+        const successfulLogins = await SuccessfulLogin.find().sort({ timestamp: -1 }).limit(10);
+        res.json(successfulLogins);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der erfolgreichen Logins:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });

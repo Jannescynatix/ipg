@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('unique-ips').textContent = data.uniqueIPs;
             document.getElementById('online-users').textContent = data.onlineUsers;
             document.getElementById('failed-logins').textContent = data.failedLoginCount;
+            document.getElementById('avg-duration').textContent = `${data.avgDuration}s`; // NEU: Durchschnittliche Dauer
 
             const tableBody = document.querySelector('#visit-table tbody');
             tableBody.innerHTML = '';
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${visit.city ? `${visit.city}, ${visit.country}` : 'Unbekannt'}</td>
                     <td>${visit.device}</td>
                     <td>${visit.browser}</td>
+                    <td>${visit.duration ? `${visit.duration}s` : 'N/A'}</td>
                     <td>${new Date(visit.timestamp).toLocaleString()}</td>
                 `;
                 tableBody.appendChild(row);
@@ -52,13 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
             createOSChart(data.visitsByOS);
             createBrowserChart(data.visitsByBrowser);
             fetchFailedLogins();
+            fetchSuccessfulLogins(); // NEU: Aufruf für erfolgreiche Logins
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         }
     };
 
-    // NEU: Funktion zum Abrufen und Anzeigen der fehlgeschlagenen Logins
     const fetchFailedLogins = async () => {
         try {
             const response = await fetch('/api/failed-logins', {
@@ -90,7 +92,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Funktion zum Erstellen des Balkendiagramms (Besuche pro Tag)
+    // NEU: Funktion zum Abrufen und Anzeigen der erfolgreichen Logins
+    const fetchSuccessfulLogins = async () => {
+        try {
+            const response = await fetch('/api/successful-logins', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der erfolgreichen Logins.');
+            }
+            const successfulLogins = await response.json();
+            const tableBody = document.querySelector('#successful-logins-table tbody');
+            tableBody.innerHTML = '';
+            successfulLogins.forEach(login => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${login.ipAddress}</td>
+                    <td>${login.username}</td>
+                    <td>${new Date(login.timestamp).toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der erfolgreichen Logins:', error);
+        }
+    };
+
+    // ... Rest der Diagramm-Funktionen bleiben gleich ...
+
     const createVisitsChart = (visitsData) => {
         const ctx = document.getElementById('visitsChart').getContext('2d');
         const labels = visitsData.map(item => item._id);
@@ -127,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Funktion zum Erstellen des Kreisdiagramms (Betriebssysteme)
     const createOSChart = (osData) => {
         const ctx = document.getElementById('osChart').getContext('2d');
         const labels = osData.map(item => item._id);
@@ -182,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Funktion zum Erstellen des Browser-Diagramms
     const createBrowserChart = (browserData) => {
         const ctx = document.getElementById('browserChart').getContext('2d');
         const labels = browserData.map(item => item._id);

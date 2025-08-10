@@ -240,3 +240,27 @@ h2 {
 #failed-logins-table tbody tr:hover {
     background-color: #f9f9f9;
 }
+/* public/css/style.css (am Ende hinzufügen) */
+
+#successful-logins-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+#successful-logins-table th, #successful-logins-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+#successful-logins-table th {
+    background-color: #e6f7ff; /* Ein hellblauer Ton */
+    color: #0077b6; /* Passende Schriftfarbe */
+    font-weight: bold;
+}
+#successful-logins-table tbody tr:hover {
+    background-color: #f0f8ff; /* Etwas dunkler beim Hover */
+}
