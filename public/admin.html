@@ -12,6 +12,7 @@
         <h1>Admin-Dashboard</h1>
         <button id="logout-btn">Ausloggen</button>
     </header>
+
     <div class="stats-grid">
         <div class="card">
             <h3>Gesamte Besuche</h3>
@@ -25,6 +26,11 @@
             <h3>Gerade Online</h3>
             <p id="online-users">0</p>
         </div>
+    </div>
+
+    <h2>Besuche nach Tag</h2>
+    <div class="chart-container">
+        <canvas id="visitsChart"></canvas>
     </div>
 
     <h2>Besucherprotokoll</h2>
@@ -43,6 +49,7 @@
     </table>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/admin.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
-// public/js/admin.js
+// public/js/admin.js (komplett)
+
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -33,25 +34,71 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('online-users').textContent = data.onlineUsers;
 
             const tableBody = document.querySelector('#visit-table tbody');
-            tableBody.innerHTML = ''; // Vorherige Einträge löschen
+            tableBody.innerHTML = '';
 
             data.visits.forEach(visit => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${visit.ipAddress}</td>
-                    <td>${visit.city}, ${visit.country}</td>
+                    <td>${visit.city ? `${visit.city}, ${visit.country}` : 'Unbekannt'}</td>
                     <td>${visit.device}</td>
                     <td>${visit.browser}</td>
                     <td>${new Date(visit.timestamp).toLocaleString()}</td>
                 `;
                 tableBody.appendChild(row);
             });
+
+            createVisitsChart(data.visitsByDay);
+
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         }
     };
 
-    // Daten beim Laden der Seite und alle 30 Sekunden aktualisieren
+    // Funktion zum Erstellen des Diagramms
+    const createVisitsChart = (visitsData) => {
+        const ctx = document.getElementById('visitsChart').getContext('2d');
+        const labels = visitsData.map(item => item._id);
+        const counts = visitsData.map(item => item.count);
+
+        // Zerstöre das alte Diagramm, falls es existiert, um Fehler zu vermeiden
+        if (window.myChart) {
+            window.myChart.destroy();
+        }
+
+        window.myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Anzahl der Besuche',
+                    data: counts,
+                    backgroundColor: 'rgba(0, 119, 182, 0.7)',
+                    borderColor: 'rgba(0, 119, 182, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Anzahl'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Datum'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     fetchDashboardData();
-    setInterval(fetchDashboardData, 30000);
+    setInterval(fetchDashboardData, 5000);
 });

@@ -132,3 +132,12 @@ h2 {
 #visit-table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
+/* public/css/style.css (Auszug, füge dies am Ende hinzu) */
+
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+}

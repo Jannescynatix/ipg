@@ -5,7 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
-const fetch = require('node-fetch'); // Import der fetch-Bibliothek
+const fetch = require('node-fetch');
 
 dotenv.config();
 
@@ -81,7 +81,6 @@ app.post('/api/visit', async (req, res) => {
     let city = 'Unbekannt';
 
     try {
-        // Geolocation-Anfrage vom Backend aus
         const geoResponse = await fetch(`http://ip-api.com/json/${ipAddress}`);
         const geoData = await geoResponse.json();
         if (geoData.status === 'success') {
@@ -127,8 +126,18 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000);
         const onlineUsers = (await Visit.distinct('ipAddress', { timestamp: { $gte: onlineThreshold } })).length;
 
-        res.json({ visits, totalVisits, uniqueIPs, onlineUsers });
+        // Daten für Diagramme aufbereiten
+        const visitsByDay = await Visit.aggregate([
+            { $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+                    count: { $sum: 1 }
+                }},
+            { $sort: { _id: 1 } }
+        ]);
+
+        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay });
     } catch (error) {
+        console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });
