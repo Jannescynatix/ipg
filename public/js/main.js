@@ -2,18 +2,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const getUserData = async () => {
         try {
-            const response = await fetch('https://api.ip-api.com/json/');
-            const geoData = await response.json();
-
             const data = {
                 browser: navigator.userAgent,
                 os: navigator.platform,
-                device: getDeviceType(),
-                country: geoData.country,
-                city: geoData.city
+                device: getDeviceType()
             };
 
-            // Sende Daten an unser Backend
+            // Sende nur die Browserdaten an unser Backend
             await fetch('/api/visit', {
                 method: 'POST',
                 headers: {

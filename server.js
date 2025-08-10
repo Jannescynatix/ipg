@@ -5,6 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
+const fetch = require('node-fetch'); // Import der fetch-Bibliothek
 
 dotenv.config();
 
@@ -41,12 +42,16 @@ const User = mongoose.model('User', userSchema);
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
-    const adminExists = await User.findOne({ username: 'admin' });
-    if (!adminExists) {
-        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
-        const adminUser = new User({ username: 'admin', password: hashedPassword });
-        await adminUser.save();
-        console.log('Admin-Benutzer erstellt.');
+    try {
+        const adminExists = await User.findOne({ username: 'admin' });
+        if (!adminExists) {
+            const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+            const adminUser = new User({ username: 'admin', password: hashedPassword });
+            await adminUser.save();
+            console.log('Admin-Benutzer erstellt.');
+        }
+    } catch (err) {
+        console.error('Fehler beim Erstellen des Admin-Benutzers:', err);
     }
 }
 createAdminUser();
@@ -55,19 +60,37 @@ createAdminUser();
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401);
+    if (token == null) return res.redirect('/login');
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) return res.redirect('/login');
         req.user = user;
         next();
     });
 };
 
+// ---
 // API-Endpunkte
+// ---
+
 app.post('/api/visit', async (req, res) => {
-    const { browser, os, device, country, city } = req.body;
+    const { browser, os, device } = req.body;
     const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    let country = 'Unbekannt';
+    let city = 'Unbekannt';
+
+    try {
+        // Geolocation-Anfrage vom Backend aus
+        const geoResponse = await fetch(`http://ip-api.com/json/${ipAddress}`);
+        const geoData = await geoResponse.json();
+        if (geoData.status === 'success') {
+            country = geoData.country;
+            city = geoData.city;
+        }
+    } catch (geoError) {
+        console.error('Fehler beim Abrufen der Geolocation-Daten:', geoError);
+    }
 
     const newVisit = new Visit({ ipAddress, browser, os, device, country, city });
     try {
@@ -100,9 +123,9 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         const totalVisits = await Visit.countDocuments();
         const uniqueIPs = (await Visit.distinct('ipAddress')).length;
 
-        // Einfache Statistik für Online-User (innerhalb der letzten 5 Minuten)
+        // Statistik für Online-Nutzer (innerhalb der letzten 5 Minuten)
         const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000);
-        const onlineUsers = await Visit.countDocuments({ timestamp: { $gte: onlineThreshold } });
+        const onlineUsers = (await Visit.distinct('ipAddress', { timestamp: { $gte: onlineThreshold } })).length;
 
         res.json({ visits, totalVisits, uniqueIPs, onlineUsers });
     } catch (error) {
@@ -110,7 +133,10 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
     }
 });
 
+// ---
 // Statische Dateien servieren
+// ---
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
