@@ -5,7 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
-const fetch = require('node-fetch'); // Stelle sicher, dass dies importiert wird
+const { default: fetch } = require('node-fetch'); // KORRIGIERT: Expliziter Import
 
 dotenv.config();
 
@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }
 });
 
-const failedLoginSchema = new mongoose.mongoose.Schema({
+const failedLoginSchema = new mongoose.Schema({
     ipAddress: String,
     username: String,
     timestamp: { type: Date, default: Date.now }
@@ -88,7 +88,7 @@ app.post('/api/visit', async (req, res) => {
     let city = 'Unbekannt';
 
     try {
-        // KORRIGIERT: Explizit 'fetch' aus 'node-fetch' verwenden
+        // Verwendung der korrekt importierten fetch-Funktion
         const geoResponse = await fetch(`https://ip-api.com/json/${ipAddress}`);
         const geoData = await geoResponse.json();
         if (geoData.status === 'success') {
@@ -97,8 +97,6 @@ app.post('/api/visit', async (req, res) => {
         }
     } catch (geoError) {
         console.error('Fehler beim Abrufen der Geolocation-Daten:', geoError);
-        // Hier ist es sinnvoll, das Ergebnis zurückzugeben, selbst wenn die Geolocation fehlschlägt
-        // So bricht der ganze Prozess nicht ab.
     }
 
     const newVisit = new Visit({ ipAddress, browser, os, device, country, city });
