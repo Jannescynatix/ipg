@@ -1,5 +1,4 @@
-// public/js/admin.js (komplett)
-
+// public/js/admin.js (kompletter Code)
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -32,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('total-visits').textContent = data.totalVisits;
             document.getElementById('unique-ips').textContent = data.uniqueIPs;
             document.getElementById('online-users').textContent = data.onlineUsers;
+            document.getElementById('failed-logins').textContent = data.failedLoginCount; // NEU: fehlgeschlagene Logins
 
             const tableBody = document.querySelector('#visit-table tbody');
             tableBody.innerHTML = '';
@@ -49,24 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             createVisitsChart(data.visitsByDay);
+            createOSChart(data.visitsByOS); // NEU: Aufruf zum Erstellen des OS-Diagramms
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         }
     };
 
-    // Funktion zum Erstellen des Diagramms
+    // Funktion zum Erstellen des Balkendiagramms (Besuche pro Tag)
     const createVisitsChart = (visitsData) => {
         const ctx = document.getElementById('visitsChart').getContext('2d');
         const labels = visitsData.map(item => item._id);
         const counts = visitsData.map(item => item.count);
 
-        // Zerstöre das alte Diagramm, falls es existiert, um Fehler zu vermeiden
-        if (window.myChart) {
-            window.myChart.destroy();
+        if (window.visitsChartInstance) {
+            window.visitsChartInstance.destroy();
         }
 
-        window.myChart = new Chart(ctx, {
+        window.visitsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
@@ -83,15 +83,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Anzahl'
-                        }
+                        title: { display: true, text: 'Anzahl' }
                     },
                     x: {
-                        title: {
-                            display: true,
-                            text: 'Datum'
+                        title: { display: true, text: 'Datum' }
+                    }
+                }
+            }
+        });
+    };
+
+    // NEU: Funktion zum Erstellen des Kreisdiagramms (Betriebssysteme)
+    const createOSChart = (osData) => {
+        const ctx = document.getElementById('osChart').getContext('2d');
+        const labels = osData.map(item => item._id);
+        const counts = osData.map(item => item.count);
+
+        if (window.osChartInstance) {
+            window.osChartInstance.destroy();
+        }
+
+        const backgroundColors = [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 206, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 159, 64, 0.7)'
+        ];
+
+        window.osChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Verwendete Betriebssysteme',
+                    data: counts,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed;
+                                }
+                                return label;
+                            }
                         }
                     }
                 }
@@ -100,5 +149,5 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     fetchDashboardData();
-    setInterval(fetchDashboardData, 5000);
+    setInterval(fetchDashboardData, 30000);
 });

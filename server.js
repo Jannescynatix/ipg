@@ -1,4 +1,4 @@
-// server.js
+// server.js (kompletter Code)
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -37,8 +37,16 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }
 });
 
+// NEU: Schema für fehlgeschlagene Login-Versuche
+const failedLoginSchema = new mongoose.mongoose.Schema({
+    ipAddress: String,
+    username: String,
+    timestamp: { type: Date, default: Date.now }
+});
+
 const Visit = mongoose.model('Visit', visitSchema);
 const User = mongoose.model('User', userSchema);
+const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
@@ -100,15 +108,15 @@ app.post('/api/visit', async (req, res) => {
     }
 });
 
+// NEU: Loggt fehlgeschlagene Versuche
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
-    if (!user) {
-        return res.status(400).send('Ungültiger Benutzername oder Passwort.');
-    }
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+        const newFailedLogin = new FailedLogin({ ipAddress, username });
+        await newFailedLogin.save();
         return res.status(400).send('Ungültiger Benutzername oder Passwort.');
     }
 
@@ -122,11 +130,9 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         const totalVisits = await Visit.countDocuments();
         const uniqueIPs = (await Visit.distinct('ipAddress')).length;
 
-        // Statistik für Online-Nutzer (innerhalb der letzten 5 Minuten)
         const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000);
         const onlineUsers = (await Visit.distinct('ipAddress', { timestamp: { $gte: onlineThreshold } })).length;
 
-        // Daten für Diagramme aufbereiten
         const visitsByDay = await Visit.aggregate([
             { $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
@@ -135,7 +141,19 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
             { $sort: { _id: 1 } }
         ]);
 
-        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay });
+        // NEU: Daten für Betriebssystem-Diagramm
+        const visitsByOS = await Visit.aggregate([
+            { $group: {
+                    _id: "$os",
+                    count: { $sum: 1 }
+                }},
+            { $sort: { count: -1 } }
+        ]);
+
+        // NEU: Anzahl der fehlgeschlagenen Logins
+        const failedLoginCount = await FailedLogin.countDocuments();
+
+        res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, failedLoginCount });
     } catch (error) {
         console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
@@ -145,19 +163,8 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 // ---
 // Statische Dateien servieren
 // ---
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.listen(PORT, () => {
-    console.log(`Server läuft auf Port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
