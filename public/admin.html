@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin-Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container admin-container">
+    <header>
+        <h1>Admin-Dashboard</h1>
+        <button id="logout-btn">Ausloggen</button>
+    </header>
+    <div class="stats-grid">
+        <div class="card">
+            <h3>Gesamte Besuche</h3>
+            <p id="total-visits">0</p>
+        </div>
+        <div class="card">
+            <h3>Einzigartige IPs</h3>
+            <p id="unique-ips">0</p>
+        </div>
+        <div class="card">
+            <h3>Gerade Online</h3>
+            <p id="online-users">0</p>
+        </div>
+    </div>
+
+    <h2>Besucherprotokoll</h2>
+    <table id="visit-table">
+        <thead>
+        <tr>
+            <th>IP-Adresse</th>
+            <th>Ort</th>
+            <th>Gerät</th>
+            <th>Browser</th>
+            <th>Zeitpunkt</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

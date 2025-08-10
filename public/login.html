@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin-Login</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container login-container">
+    <h1>Admin-Login</h1>
+    <form id="loginForm">
+        <input type="text" id="username" placeholder="Benutzername" required>
+        <input type="password" id="password" placeholder="Passwort" required>
+        <button type="submit">Einloggen</button>
+        <p id="error-message"></p>
+    </form>
+</div>
+<script>
+    const form = document.getElementById('loginForm');
+    const errorMessage = document.getElementById('error-message');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = form.username.value;
+        const password = form.password.value;
+
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                window.location.href = '/admin';
+            } else {
+                errorMessage.textContent = data.message;
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Verbindungsfehler';
+        }
+    });
+</script>
+</body>
+</html>
