@@ -1,4 +1,3 @@
-// public/js/admin.js (kompletter Code)
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -7,7 +6,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const logoutBtn = document.getElementById('logout-btn');
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await fetch('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.error('Fehler beim Senden des Logout-Signals:', error);
+        }
         localStorage.removeItem('token');
         window.location.href = '/login';
     });
@@ -32,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('unique-ips').textContent = data.uniqueIPs;
             document.getElementById('online-users').textContent = data.onlineUsers;
             document.getElementById('failed-logins').textContent = data.failedLoginCount;
-            document.getElementById('avg-duration').textContent = `${data.avgDuration}s`; // NEU: Durchschnittliche Dauer
+            document.getElementById('avg-duration').textContent = `${data.avgDuration}s`;
 
             const tableBody = document.querySelector('#visit-table tbody');
             tableBody.innerHTML = '';
@@ -54,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
             createOSChart(data.visitsByOS);
             createBrowserChart(data.visitsByBrowser);
             fetchFailedLogins();
-            fetchSuccessfulLogins(); // NEU: Aufruf für erfolgreiche Logins
+            fetchSuccessfulLogins();
+            fetchSuccessfulLogouts();
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
@@ -92,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // NEU: Funktion zum Abrufen und Anzeigen der erfolgreichen Logins
     const fetchSuccessfulLogins = async () => {
         try {
             const response = await fetch('/api/successful-logins', {
@@ -120,7 +129,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ... Rest der Diagramm-Funktionen bleiben gleich ...
+    const fetchSuccessfulLogouts = async () => {
+        try {
+            const response = await fetch('/api/successful-logouts', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der erfolgreichen Logouts.');
+            }
+            const successfulLogouts = await response.json();
+            const tableBody = document.querySelector('#successful-logouts-table tbody');
+            tableBody.innerHTML = '';
+            successfulLogouts.forEach(logout => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${logout.ipAddress}</td>
+                    <td>${logout.username}</td>
+                    <td>${new Date(logout.timestamp).toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der erfolgreichen Logouts:', error);
+        }
+    };
 
     const createVisitsChart = (visitsData) => {
         const ctx = document.getElementById('visitsChart').getContext('2d');
