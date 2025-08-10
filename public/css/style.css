@@ -193,3 +193,50 @@ h2 {
 .card.security-card h3, .card.security-card p {
     color: #d9534f;
 }
+/* public/css/style.css (am Ende hinzufügen) */
+
+.chart-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.chart-container h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+    text-align: center;
+}
+.card.security-card {
+    background-color: #fcebeb;
+    color: #d9534f;
+}
+.card.security-card h3, .card.security-card p {
+    color: #d9534f;
+}
+#failed-logins-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+#failed-logins-table th, #failed-logins-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+#failed-logins-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+#failed-logins-table tbody tr:hover {
+    background-color: #f9f9f9;
+}

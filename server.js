@@ -5,7 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
-const { default: fetch } = require('node-fetch'); // KORRIGIERT: Expliziter Import
+const { default: fetch } = require('node-fetch');
 
 dotenv.config();
 
@@ -88,7 +88,6 @@ app.post('/api/visit', async (req, res) => {
     let city = 'Unbekannt';
 
     try {
-        // Verwendung der korrekt importierten fetch-Funktion
         const geoResponse = await fetch(`https://ip-api.com/json/${ipAddress}`);
         const geoData = await geoResponse.json();
         if (geoData.status === 'success') {
@@ -161,6 +160,17 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         res.json({ visits, totalVisits, uniqueIPs, onlineUsers, visitsByDay, visitsByOS, visitsByBrowser, failedLoginCount });
     } catch (error) {
         console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
+        res.status(500).send('Fehler beim Abrufen der Daten.');
+    }
+});
+
+// NEU: Endpunkt für fehlgeschlagene Logins
+app.get('/api/failed-logins', authenticateToken, async (req, res) => {
+    try {
+        const failedLogins = await FailedLogin.find().sort({ timestamp: -1 }).limit(10);
+        res.json(failedLogins);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der fehlgeschlagenen Logins:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });

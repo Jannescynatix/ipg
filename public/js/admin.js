@@ -50,10 +50,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
             createVisitsChart(data.visitsByDay);
             createOSChart(data.visitsByOS);
-            createBrowserChart(data.visitsByBrowser); // NEU: Aufruf für Browser-Diagramm
+            createBrowserChart(data.visitsByBrowser);
+            fetchFailedLogins();
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
+        }
+    };
+
+    // NEU: Funktion zum Abrufen und Anzeigen der fehlgeschlagenen Logins
+    const fetchFailedLogins = async () => {
+        try {
+            const response = await fetch('/api/failed-logins', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der fehlgeschlagenen Logins.');
+            }
+
+            const failedLogins = await response.json();
+            const tableBody = document.querySelector('#failed-logins-table tbody');
+            tableBody.innerHTML = '';
+
+            failedLogins.forEach(login => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${login.ipAddress}</td>
+                    <td>${login.username}</td>
+                    <td>${new Date(login.timestamp).toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error('Fehler beim Abrufen der fehlgeschlagenen Logins:', error);
         }
     };
 
@@ -149,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // NEU: Funktion zum Erstellen des Browser-Diagramms
+    // Funktion zum Erstellen des Browser-Diagramms
     const createBrowserChart = (browserData) => {
         const ctx = document.getElementById('browserChart').getContext('2d');
         const labels = browserData.map(item => item._id);
@@ -169,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         window.browserChartInstance = new Chart(ctx, {
-            type: 'doughnut', // Ein Donut-Diagramm sieht hier gut aus
+            type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
