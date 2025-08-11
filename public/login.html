@@ -24,10 +24,10 @@
 </div>
 
 <script>
-    // public/js/login.js (komplett)
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('login-form');
         const errorMessage = document.getElementById('error-message');
+        const submitButton = form.querySelector('button[type="submit"]');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -36,6 +36,7 @@
             const password = document.getElementById('password').value;
 
             errorMessage.textContent = '';
+            submitButton.disabled = true; // Button während der Anfrage deaktivieren
 
             try {
                 const response = await fetch('/api/login', {
@@ -53,9 +54,40 @@
                 } else {
                     const errorText = await response.text();
                     errorMessage.textContent = errorText;
+
+                    // NEU: Wenn eine Sperr-Meldung kommt, den Button deaktiviert lassen
+                    // und prüfen, wann die Sperre abläuft
+                    if (response.status === 403) {
+                        const blockRegex = /Bitte warten Sie (\d+) Minuten./;
+                        const match = errorText.match(blockRegex);
+                        if (match && match[1]) {
+                            const remainingMinutes = parseInt(match[1]);
+
+                            // Setze den Timer, um den Button wieder zu aktivieren
+                            let seconds = remainingMinutes * 60;
+                            const timer = setInterval(() => {
+                                seconds--;
+                                const mins = Math.floor(seconds / 60);
+                                const secs = seconds % 60;
+                                errorMessage.textContent = `Zu viele fehlgeschlagene Versuche. Bitte warten Sie ${mins} Minute(n) und ${secs} Sekunde(n).`;
+
+                                if (seconds <= 0) {
+                                    clearInterval(timer);
+                                    errorMessage.textContent = 'Die Sperre ist abgelaufen. Sie können es erneut versuchen.';
+                                    submitButton.disabled = false; // Button wieder aktivieren
+                                }
+                            }, 1000);
+                        }
+                    }
                 }
             } catch (error) {
                 errorMessage.textContent = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.';
+            } finally {
+                // Button nur bei fehlgeschlagenen Anmeldeversuchen wieder aktivieren,
+                // nicht bei einer aktiven Sperre
+                if (errorMessage.textContent.indexOf('Bitte warten') === -1) {
+                    submitButton.disabled = false;
+                }
             }
         });
     });
