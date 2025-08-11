@@ -170,30 +170,3 @@ body {
     text-decoration: underline;
 }
 
-/* Neue Tabelle im Admin-Dashboard */
-#giveaway-participants-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-#giveaway-participants-table th, #giveaway-participants-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-#giveaway-participants-table th {
-    background-color: #e6f7ff;
-    color: #0077b6;
-}
-#giveaway-participants-table tbody tr:hover {
-    background-color: #f0f8ff;
-}
-
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-    }
-    .navbar a {
-        margin: 0 10px;
-    }
-}
