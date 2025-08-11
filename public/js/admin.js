@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchFailedLogins();
             fetchSuccessfulLogins();
             fetchSuccessfulLogouts();
+            fetchGiveawayParticipants(); // NEU: Funktion für Gewinnspiel-Teilnehmer aufrufen
 
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
@@ -153,6 +154,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('Fehler beim Abrufen der erfolgreichen Logouts:', error);
+        }
+    };
+
+    // NEU: Funktion zum Abrufen und Anzeigen der Gewinnspiel-Teilnehmer
+    const fetchGiveawayParticipants = async () => {
+        try {
+            const response = await fetch('/api/giveaway-participants', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Gewinnspiel-Teilnehmer.');
+            }
+            const participants = await response.json();
+            const tableBody = document.querySelector('#giveaway-participants-table tbody');
+            tableBody.innerHTML = '';
+            participants.forEach(participant => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${participant.name}</td>
+                    <td>${participant.email}</td>
+                    <td>${participant.address}</td>
+                    <td>${new Date(participant.timestamp).toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der Gewinnspiel-Teilnehmer:', error);
         }
     };
 

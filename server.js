@@ -50,10 +50,17 @@ const successfulLoginSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-// NEU: Schema für erfolgreiche Logouts
 const successfulLogoutSchema = new mongoose.Schema({
     ipAddress: String,
     username: String,
+    timestamp: { type: Date, default: Date.now }
+});
+
+// NEU: Schema für Gewinnspiel-Teilnehmer
+const giveawayParticipantSchema = new mongoose.Schema({
+    name: String,
+    email: String,
+    address: String,
     timestamp: { type: Date, default: Date.now }
 });
 
@@ -61,7 +68,8 @@ const Visit = mongoose.model('Visit', visitSchema);
 const User = mongoose.model('User', userSchema);
 const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
 const SuccessfulLogin = mongoose.model('SuccessfulLogin', successfulLoginSchema);
-const SuccessfulLogout = mongoose.model('SuccessfulLogout', successfulLogoutSchema); // NEU: Modell für erfolgreiche Logouts
+const SuccessfulLogout = mongoose.model('SuccessfulLogout', successfulLogoutSchema);
+const GiveawayParticipant = mongoose.model('GiveawayParticipant', giveawayParticipantSchema); // NEU: Modell für Teilnehmer
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
@@ -141,13 +149,11 @@ app.post('/api/login', async (req, res) => {
     res.json({ token });
 });
 
-// NEU: Logout-Endpunkt
 app.post('/api/logout', authenticateToken, async (req, res) => {
     try {
         const { username } = req.user;
         const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-        // Logout in Datenbank protokollieren
         const newSuccessfulLogout = new SuccessfulLogout({ ipAddress, username });
         await newSuccessfulLogout.save();
 
@@ -225,13 +231,40 @@ app.get('/api/successful-logins', authenticateToken, async (req, res) => {
     }
 });
 
-// NEU: Endpunkt für erfolgreiche Logouts
 app.get('/api/successful-logouts', authenticateToken, async (req, res) => {
     try {
         const successfulLogouts = await SuccessfulLogout.find().sort({ timestamp: -1 }).limit(10);
         res.json(successfulLogouts);
     } catch (error) {
         console.error('Fehler beim Abrufen der erfolgreichen Logouts:', error);
+        res.status(500).send('Fehler beim Abrufen der Daten.');
+    }
+});
+
+// NEU: Endpunkt zum Speichern von Gewinnspiel-Teilnehmern
+app.post('/api/giveaway-signup', async (req, res) => {
+    try {
+        const { name, email, address } = req.body;
+        if (!name || !email || !address) {
+            return res.status(400).send('Alle Felder sind erforderlich.');
+        }
+
+        const newParticipant = new GiveawayParticipant({ name, email, address });
+        await newParticipant.save();
+        res.status(200).send('Anmeldung erfolgreich! Viel Glück!');
+    } catch (error) {
+        console.error('Fehler beim Speichern des Gewinnspiel-Teilnehmers:', error);
+        res.status(500).send('Interner Serverfehler.');
+    }
+});
+
+// NEU: Endpunkt zum Abrufen aller Gewinnspiel-Teilnehmer
+app.get('/api/giveaway-participants', authenticateToken, async (req, res) => {
+    try {
+        const participants = await GiveawayParticipant.find().sort({ timestamp: -1 });
+        res.json(participants);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Gewinnspiel-Teilnehmer:', error);
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });
