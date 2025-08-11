@@ -29,7 +29,7 @@ const visitSchema = new mongoose.Schema({
     browser: String,
     os: String,
     device: String,
-    duration: Number, // Dauer des Besuchs in Sekunden
+    duration: Number,
     timestamp: { type: Date, default: Date.now }
 });
 
@@ -56,7 +56,6 @@ const successfulLogoutSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-// NEU: Schema für Gewinnspiel-Teilnehmer
 const giveawayParticipantSchema = new mongoose.Schema({
     name: String,
     email: String,
@@ -64,12 +63,19 @@ const giveawayParticipantSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// NEU: Schema für gesperrte IP-Adressen
+const blockedIpSchema = new mongoose.Schema({
+    ipAddress: { type: String, required: true, unique: true },
+    blockedUntil: { type: Date, required: true }
+});
+
 const Visit = mongoose.model('Visit', visitSchema);
 const User = mongoose.model('User', userSchema);
 const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
 const SuccessfulLogin = mongoose.model('SuccessfulLogin', successfulLoginSchema);
 const SuccessfulLogout = mongoose.model('SuccessfulLogout', successfulLogoutSchema);
-const GiveawayParticipant = mongoose.model('GiveawayParticipant', giveawayParticipantSchema); // NEU: Modell für Teilnehmer
+const GiveawayParticipant = mongoose.model('GiveawayParticipant', giveawayParticipantSchema);
+const BlockedIp = mongoose.model('BlockedIp', blockedIpSchema); // NEU: Modell für gesperrte IPs
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
@@ -133,17 +139,47 @@ app.post('/api/visit', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
     const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    // NEU: Sperr-Logik prüfen
+    const blockedIp = await BlockedIp.findOne({ ipAddress });
+    if (blockedIp && blockedIp.blockedUntil > new Date()) {
+        const remainingTime = Math.ceil((blockedIp.blockedUntil - new Date()) / 1000 / 60);
+        return res.status(403).send(`Zu viele fehlgeschlagene Versuche. Bitte warten Sie ${remainingTime} Minuten.`);
+    }
+
+    const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
         const newFailedLogin = new FailedLogin({ ipAddress, username });
         await newFailedLogin.save();
+
+        // NEU: Fehlgeschlagene Versuche in den letzten 15 Minuten zählen
+        const failedAttemptsCount = await FailedLogin.countDocuments({
+            ipAddress: ipAddress,
+            timestamp: { $gte: new Date(Date.now() - 15 * 60 * 1000) }
+        });
+
+        const MAX_ATTEMPTS = 5;
+        const BLOCK_DURATION_MINUTES = 30;
+
+        if (failedAttemptsCount >= MAX_ATTEMPTS) {
+            await BlockedIp.findOneAndUpdate(
+                { ipAddress },
+                { blockedUntil: new Date(Date.now() + BLOCK_DURATION_MINUTES * 60 * 1000) },
+                { upsert: true }
+            );
+            return res.status(403).send(`Zu viele fehlgeschlagene Versuche. Sie wurden für ${BLOCK_DURATION_MINUTES} Minuten gesperrt.`);
+        }
+
         return res.status(400).send('Ungültiger Benutzername oder Passwort.');
     }
 
     const newSuccessfulLogin = new SuccessfulLogin({ ipAddress, username });
     await newSuccessfulLogin.save();
+
+    // NEU: Bei erfolgreichem Login alte Sperre (falls vorhanden) löschen
+    await BlockedIp.deleteOne({ ipAddress });
 
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
@@ -241,7 +277,6 @@ app.get('/api/successful-logouts', authenticateToken, async (req, res) => {
     }
 });
 
-// NEU: Endpunkt zum Speichern von Gewinnspiel-Teilnehmern
 app.post('/api/giveaway-signup', async (req, res) => {
     try {
         const { name, email, address } = req.body;
@@ -258,7 +293,6 @@ app.post('/api/giveaway-signup', async (req, res) => {
     }
 });
 
-// NEU: Endpunkt zum Abrufen aller Gewinnspiel-Teilnehmer
 app.get('/api/giveaway-participants', authenticateToken, async (req, res) => {
     try {
         const participants = await GiveawayParticipant.find().sort({ timestamp: -1 });
