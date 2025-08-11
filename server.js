@@ -76,20 +76,27 @@ const GiveawayParticipant = mongoose.model('GiveawayParticipant', giveawayPartic
 const BlockedIp = mongoose.model('BlockedIp', blockedIpSchema);
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
-async function createAdminUser() {
+async function createAdminUsers() {
     try {
-        const adminExists = await User.findOne({ username: 'admin' });
-        if (!adminExists) {
-            const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
-            const adminUser = new User({ username: 'admin', password: hashedPassword });
-            await adminUser.save();
-            console.log('Admin-Benutzer erstellt.');
+        const adminUsers = [
+            { username: 'admin', password: process.env.ADMIN_PASSWORD },
+            { username: 'zweiteradmin', password: process.env.ADMIN_PASSWORD_2 } // NEU: Zweiter Admin
+        ];
+
+        for (const admin of adminUsers) {
+            const userExists = await User.findOne({ username: admin.username });
+            if (!userExists) {
+                const hashedPassword = await bcrypt.hash(admin.password, 10);
+                const newUser = new User({ username: admin.username, password: hashedPassword });
+                await newUser.save();
+                console.log(`Admin-Benutzer '${admin.username}' erstellt.`);
+            }
         }
     } catch (err) {
-        console.error('Fehler beim Erstellen des Admin-Benutzers:', err);
+        console.error('Fehler beim Erstellen der Admin-Benutzer:', err);
     }
 }
-createAdminUser();
+createAdminUsers(); // Funktion aufrufen, um alle Admins zu erstellen
 
 // JWT-Middleware zur Authentifizierung
 const authenticateToken = (req, res, next) => {
