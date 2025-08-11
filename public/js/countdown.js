@@ -1,6 +1,6 @@
 // public/js/countdown.js (neu erstellen)
 document.addEventListener('DOMContentLoaded', () => {
-    const countdownDate = new Date("Aug 11, 2025 14:29:00").getTime();
+    const countdownDate = new Date("Aug 30, 2025 14:35:00").getTime();
 
     const x = setInterval(() => {
         const now = new Date().getTime();
