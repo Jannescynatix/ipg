@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const clearDataBtn = document.getElementById('clear-data-btn');
     clearDataBtn.addEventListener('click', async () => {
-        const confirmClear = confirm("Bist du sicher, dass du alle Besuchsdaten, Login-/Logout-Logs und Gewinnspielteilnehmer löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden!");
+        const confirmClear = confirm("Bist du sicher, dass du alle Besuchsdaten und Gewinnspielteilnehmer löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden!");
         if (confirmClear) {
             try {
                 const response = await fetch('/api/dashboard/clear-data', {
@@ -46,126 +46,156 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Hilfsfunktion zum Füllen der Tabellen mit limitierter Anzeige
-    const populateTable = (tableId, data, columns) => {
-        const tableBody = document.querySelector(`#${tableId} tbody`);
-        const viewAllBtn = document.getElementById(`view-all-${tableId}`);
-        const defaultLimit = 20;
-
-        if (viewAllBtn) {
-            viewAllBtn.style.display = data.length > defaultLimit ? 'block' : 'none';
-        }
-
-        tableBody.innerHTML = '';
-        const displayData = (viewAllBtn && viewAllBtn.dataset.showAll === 'true') ? data : data.slice(0, defaultLimit);
-
-        displayData.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = columns.map(col => `<td>${col(item)}</td>`).join('');
-            tableBody.appendChild(row);
-        });
-
-        if (viewAllBtn) {
-            viewAllBtn.onclick = () => {
-                viewAllBtn.dataset.showAll = 'true';
-                viewAllBtn.style.display = 'none';
-                populateTable(tableId, data, columns);
-            };
-        }
-    };
-
-    // NEUE Funktion: Erstellt die Tabelle für Klick-Statistiken
-    const createClickTable = (stats) => {
-        const tableBody = document.querySelector('#click-stats-table tbody');
-        tableBody.innerHTML = '';
-        stats.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${item._id}</td><td>${item.count}</td>`;
-            tableBody.appendChild(row);
-        });
-    };
-
     const fetchDashboardData = async () => {
         try {
-            const statsResponse = await fetch('/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (statsResponse.status === 401 || statsResponse.status === 403) {
+            const response = await fetch('/api/dashboard/stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.status === 401 || response.status === 403) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
                 return;
             }
-            const data = await statsResponse.json();
-
+            const data = await response.json();
             document.getElementById('total-visits').textContent = data.totalVisits;
             document.getElementById('unique-ips').textContent = data.uniqueIPs;
             document.getElementById('online-users').textContent = data.onlineUsers;
             document.getElementById('failed-logins').textContent = data.failedLoginCount;
             document.getElementById('avg-duration').textContent = `${data.avgDuration}s`;
-
+            const tableBody = document.querySelector('#visit-table tbody');
+            tableBody.innerHTML = '';
+            data.visits.forEach(visit => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+<td>${visit.ipAddress}</td>
+<td>${visit.city ? `${visit.city}, ${visit.country}` : 'Unbekannt'}</td>
+<td>${visit.device}</td>
+<td>${visit.browser}</td>
+<td>${visit.duration ? `${visit.duration}s` : 'N/A'}</td>
+<td>${new Date(visit.timestamp).toLocaleString()}</td>
+`;
+                tableBody.appendChild(row);
+            });
             createVisitsChart(data.visitsByDay);
             createOSChart(data.visitsByOS);
             createBrowserChart(data.visitsByBrowser);
-
-            // Lade und render die Daten für alle Tabellen
-            fetchAndRenderAllTables();
-
+            fetchFailedLogins();
+            fetchSuccessfulLogins();
+            fetchSuccessfulLogouts();
+            fetchGiveawayParticipants();
         } catch (error) {
             console.error('Fehler beim Abrufen der Dashboard-Daten:', error);
         }
     };
 
-    const fetchAndRenderAllTables = async () => {
+    const fetchFailedLogins = async () => {
         try {
-            const visitsResponse = await fetch('/api/visits', { headers: { 'Authorization': `Bearer ${token}` } });
-            const visits = await visitsResponse.json();
-            populateTable('visit-table', visits, [
-                v => v.ipAddress,
-                v => v.city ? `${v.city}, ${v.country}` : 'Unbekannt',
-                v => v.device,
-                v => v.browser,
-                v => v.duration ? `${v.duration}s` : 'N/A',
-                v => new Date(v.timestamp).toLocaleString()
-            ]);
-
-            const failedLoginsResponse = await fetch('/api/failed-logins', { headers: { 'Authorization': `Bearer ${token}` } });
-            const failedLogins = await failedLoginsResponse.json();
-            populateTable('failed-logins-table', failedLogins, [
-                l => l.ipAddress,
-                l => l.username,
-                l => new Date(l.timestamp).toLocaleString()
-            ]);
-
-            const successfulLoginsResponse = await fetch('/api/successful-logins', { headers: { 'Authorization': `Bearer ${token}` } });
-            const successfulLogins = await successfulLoginsResponse.json();
-            populateTable('successful-logins-table', successfulLogins, [
-                l => l.ipAddress,
-                l => l.username,
-                l => new Date(l.timestamp).toLocaleString()
-            ]);
-
-            const successfulLogoutsResponse = await fetch('/api/successful-logouts', { headers: { 'Authorization': `Bearer ${token}` } });
-            const successfulLogouts = await successfulLogoutsResponse.json();
-            populateTable('successful-logouts-table', successfulLogouts, [
-                l => l.ipAddress,
-                l => l.username,
-                l => new Date(l.timestamp).toLocaleString()
-            ]);
-
-            const giveawayParticipantsResponse = await fetch('/api/giveaway-participants', { headers: { 'Authorization': `Bearer ${token}` } });
-            const participants = await giveawayParticipantsResponse.json();
-            populateTable('giveaway-participants-table', participants, [
-                p => p.name,
-                p => p.email,
-                p => p.address,
-                p => new Date(p.timestamp).toLocaleString()
-            ]);
-
-            // NEU: Abrufen der Klick-Statistiken und Rendern der Tabelle
-            const clicksResponse = await fetch('/api/dashboard/clicks', { headers: { 'Authorization': `Bearer ${token}` } });
-            const clickStats = await clicksResponse.json();
-            createClickTable(clickStats);
-
+            const response = await fetch('/api/failed-logins', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der fehlgeschlagenen Logins.');
+            }
+            const failedLogins = await response.json();
+            const tableBody = document.querySelector('#failed-logins-table tbody');
+            tableBody.innerHTML = '';
+            failedLogins.forEach(login => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+<td>${login.ipAddress}</td>
+<td>${login.username}</td>
+<td>${new Date(login.timestamp).toLocaleString()}</td>
+`;
+                tableBody.appendChild(row);
+            });
         } catch (error) {
-            console.error('Fehler beim Abrufen der Tabellendaten:', error);
+            console.error('Fehler beim Abrufen der fehlgeschlagenen Logins:', error);
+        }
+    };
+
+    const fetchSuccessfulLogins = async () => {
+        try {
+            const response = await fetch('/api/successful-logins', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der erfolgreichen Logins.');
+            }
+            const successfulLogins = await response.json();
+            const tableBody = document.querySelector('#successful-logins-table tbody');
+            tableBody.innerHTML = '';
+            successfulLogins.forEach(login => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+<td>${login.ipAddress}</td>
+<td>${login.username}</td>
+<td>${new Date(login.timestamp).toLocaleString()}</td>
+`;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der erfolgreichen Logins:', error);
+        }
+    };
+
+    const fetchSuccessfulLogouts = async () => {
+        try {
+            const response = await fetch('/api/successful-logouts', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der erfolgreichen Logouts.');
+            }
+            const successfulLogouts = await response.json();
+            const tableBody = document.querySelector('#successful-logouts-table tbody');
+            tableBody.innerHTML = '';
+            successfulLogouts.forEach(logout => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+<td>${logout.ipAddress}</td>
+<td>${logout.username}</td>
+<td>${new Date(logout.timestamp).toLocaleString()}</td>
+`;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der erfolgreichen Logouts:', error);
+        }
+    };
+
+    const fetchGiveawayParticipants = async () => {
+        try {
+            const response = await fetch('/api/giveaway-participants', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Gewinnspiel-Teilnehmer.');
+            }
+            const participants = await response.json();
+            const tableBody = document.querySelector('#giveaway-participants-table tbody');
+            tableBody.innerHTML = '';
+            participants.forEach(participant => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+<td>${participant.name}</td>
+<td>${participant.email}</td>
+<td>${participant.address}</td>
+<td>${new Date(participant.timestamp).toLocaleString()}</td>
+`;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Fehler beim Abrufen der Gewinnspiel-Teilnehmer:', error);
         }
     };
 
@@ -173,11 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('visitsChart').getContext('2d');
         const labels = visitsData.map(item => item._id);
         const counts = visitsData.map(item => item.count);
-
         if (window.visitsChartInstance) {
             window.visitsChartInstance.destroy();
         }
-
         window.visitsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -209,11 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('osChart').getContext('2d');
         const labels = osData.map(item => item._id);
         const counts = osData.map(item => item.count);
-
         if (window.osChartInstance) {
             window.osChartInstance.destroy();
         }
-
         const backgroundColors = [
             'rgba(255, 99, 132, 0.7)',
             'rgba(54, 162, 235, 0.7)',
@@ -222,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
             'rgba(153, 102, 255, 0.7)',
             'rgba(255, 159, 64, 0.7)'
         ];
-
         window.osChartInstance = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -263,11 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('browserChart').getContext('2d');
         const labels = browserData.map(item => item._id);
         const counts = browserData.map(item => item.count);
-
         if (window.browserChartInstance) {
             window.browserChartInstance.destroy();
         }
-
         const backgroundColors = [
             'rgba(255, 99, 132, 0.7)',
             'rgba(54, 162, 235, 0.7)',
@@ -276,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
             'rgba(153, 102, 255, 0.7)',
             'rgba(255, 159, 64, 0.7)'
         ];
-
         window.browserChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {

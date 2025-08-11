@@ -69,7 +69,7 @@
                     <label for="terms">Ich stimme den <a href="#rules">Nutzungsbedingungen</a> zu.</label>
                     <span class="error-message" id="terms-error"></span>
                 </div>
-                <button id="kontakt-button" type="submit" class="submit-btn">Absenden</button>
+                <button type="submit" class="submit-btn">Absenden</button>
                 <div id="form-message" class="form-message"></div>
             </form>
         </div>
@@ -108,32 +108,5 @@
 <script src="/js/script.js"></script>
 <script src="/js/countdown.js"></script>
 <script src="/js/main.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Liste der Buttons, die getrackt werden sollen
-        const buttonsToTrack = ['giveaway-button', 'kontakt-button'];
-
-        buttonsToTrack.forEach(buttonId => {
-            const button = document.getElementById(buttonId);
-            if (button) {
-                button.addEventListener('click', () => {
-                    trackButtonClick(buttonId);
-                });
-            }
-        });
-
-        async function trackButtonClick(buttonId) {
-            try {
-                await fetch('/api/click', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ buttonId })
-                });
-            } catch (error) {
-                console.error('Fehler beim Tracking des Klicks:', error);
-            }
-        }
-    });
-</script>
 </body>
 </html>
