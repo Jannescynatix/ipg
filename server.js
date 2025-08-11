@@ -1,4 +1,3 @@
-// server.js (kompletter Code)
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -63,7 +62,6 @@ const giveawayParticipantSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-// NEU: Schema für gesperrte IP-Adressen
 const blockedIpSchema = new mongoose.Schema({
     ipAddress: { type: String, required: true, unique: true },
     blockedUntil: { type: Date, required: true }
@@ -75,7 +73,7 @@ const FailedLogin = mongoose.model('FailedLogin', failedLoginSchema);
 const SuccessfulLogin = mongoose.model('SuccessfulLogin', successfulLoginSchema);
 const SuccessfulLogout = mongoose.model('SuccessfulLogout', successfulLogoutSchema);
 const GiveawayParticipant = mongoose.model('GiveawayParticipant', giveawayParticipantSchema);
-const BlockedIp = mongoose.model('BlockedIp', blockedIpSchema); // NEU: Modell für gesperrte IPs
+const BlockedIp = mongoose.model('BlockedIp', blockedIpSchema);
 
 // Admin-Benutzer erstellen (Einmalig bei Start)
 async function createAdminUser() {
@@ -141,7 +139,6 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    // NEU: Sperr-Logik prüfen
     const blockedIp = await BlockedIp.findOne({ ipAddress });
     if (blockedIp && blockedIp.blockedUntil > new Date()) {
         const remainingTime = Math.ceil((blockedIp.blockedUntil - new Date()) / 1000 / 60);
@@ -154,14 +151,13 @@ app.post('/api/login', async (req, res) => {
         const newFailedLogin = new FailedLogin({ ipAddress, username });
         await newFailedLogin.save();
 
-        // NEU: Fehlgeschlagene Versuche in den letzten 15 Minuten zählen
         const failedAttemptsCount = await FailedLogin.countDocuments({
             ipAddress: ipAddress,
             timestamp: { $gte: new Date(Date.now() - 15 * 60 * 1000) }
         });
 
         const MAX_ATTEMPTS = 5;
-        const BLOCK_DURATION_MINUTES = 1;
+        const BLOCK_DURATION_MINUTES = 30;
 
         if (failedAttemptsCount >= MAX_ATTEMPTS) {
             await BlockedIp.findOneAndUpdate(
@@ -175,11 +171,10 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).send('Ungültiger Benutzername oder Passwort.');
     }
 
+    await BlockedIp.deleteOne({ ipAddress });
+
     const newSuccessfulLogin = new SuccessfulLogin({ ipAddress, username });
     await newSuccessfulLogin.save();
-
-    // NEU: Bei erfolgreichem Login alte Sperre (falls vorhanden) löschen
-    await BlockedIp.deleteOne({ ipAddress });
 
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
