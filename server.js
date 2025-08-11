@@ -66,6 +66,13 @@ const blockedIpSchema = new mongoose.Schema({
     ipAddress: { type: String, required: true, unique: true },
     blockedUntil: { type: Date, required: true }
 });
+// NEU: Schema für Button-Klicks
+const clickSchema = new mongoose.Schema({
+    buttonId: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+});
+
+const ButtonClick = mongoose.model('ButtonClick', clickSchema);
 
 const Visit = mongoose.model('Visit', visitSchema);
 const User = mongoose.model('User', userSchema);
@@ -201,6 +208,21 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
         res.status(500).send('Interner Serverfehler.');
     }
 });
+// NEU: Endpunkt zum Speichern von Button-Klicks
+app.post('/api/click', async (req, res) => {
+    const { buttonId } = req.body;
+    if (!buttonId) {
+        return res.status(400).send('Button ID ist erforderlich.');
+    }
+    try {
+        const newClick = new ButtonClick({ buttonId });
+        await newClick.save();
+        res.status(200).send('Klick gespeichert.');
+    } catch (error) {
+        console.error('Fehler beim Speichern des Klicks:', error);
+        res.status(500).send('Interner Serverfehler.');
+    }
+});
 
 app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
     try {
@@ -292,6 +314,22 @@ app.post('/api/giveaway-signup', async (req, res) => {
     } catch (error) {
         console.error('Fehler beim Speichern des Gewinnspiel-Teilnehmers:', error);
         res.status(500).send('Interner Serverfehler.');
+    }
+});
+// NEU: Endpunkt zum Abrufen der Klick-Statistiken
+app.get('/api/dashboard/clicks', authenticateToken, async (req, res) => {
+    try {
+        const clickStats = await ButtonClick.aggregate([
+            { $group: {
+                    _id: "$buttonId",
+                    count: { $sum: 1 }
+                }},
+            { $sort: { count: -1 } }
+        ]);
+        res.json(clickStats);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Klick-Statistiken:', error);
+        res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });
 
