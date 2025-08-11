@@ -1,132 +1,244 @@
 <!DOCTYPE html>
+
 <html lang="de">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Admin-Dashboard</title>
+
     <link rel="stylesheet" href="/css/style.css">
+
 </head>
+
 <body>
+
 <div class="container admin-container">
+
     <header>
+
         <h1>Admin-Dashboard</h1>
+
         <button id="logout-btn">Ausloggen</button>
+
     </header>
 
+
     <div class="stats-grid">
+
         <div class="card">
+
             <h3>Gesamte Besuche</h3>
+
             <p id="total-visits">0</p>
+
         </div>
+
         <div class="card">
+
             <h3>Einzigartige IPs</h3>
+
             <p id="unique-ips">0</p>
+
         </div>
+
         <div class="card">
+
             <h3>Gerade Online</h3>
+
             <p id="online-users">0</p>
+
         </div>
+
         <div class="card">
+
             <h3>Durchschn. Besuchsdauer</h3>
+
             <p id="avg-duration">0s</p>
+
         </div>
+
         <div class="card security-card">
+
             <h3>Fehlgeschlagene Logins</h3>
+
             <p id="failed-logins">0</p>
+
         </div>
+
     </div>
+
 
     <div class="chart-section">
+
         <div class="chart-container">
+
             <h2>Besuche nach Tag</h2>
+
             <canvas id="visitsChart"></canvas>
+
         </div>
+
         <div class="chart-container">
+
             <h2>Verwendete Betriebssysteme</h2>
+
             <canvas id="osChart"></canvas>
+
         </div>
+
         <div class="chart-container">
+
             <h2>Verwendete Browser</h2>
+
             <canvas id="browserChart"></canvas>
+
         </div>
+
     </div>
 
+
     <h2>Besucherprotokoll</h2>
+
     <table id="visit-table">
+
         <thead>
+
         <tr>
+
             <th>IP-Adresse</th>
+
             <th>Ort</th>
+
             <th>Gerät</th>
+
             <th>Browser</th>
+
             <th>Dauer (s)</th>
+
             <th>Zeitpunkt</th>
+
         </tr>
+
         </thead>
+
         <tbody>
+
         </tbody>
+
     </table>
-    <button id="show-all-visits-btn" class="show-all-btn">Alle Einträge anzeigen</button>
+
 
     <h2>Letzte fehlgeschlagene Logins</h2>
+
     <table id="failed-logins-table">
+
         <thead>
+
         <tr>
+
             <th>IP-Adresse</th>
+
             <th>Benutzername</th>
+
             <th>Zeitpunkt</th>
+
         </tr>
+
         </thead>
+
         <tbody>
+
         </tbody>
+
     </table>
-    <button id="show-all-failed-logins-btn" class="show-all-btn">Alle Einträge anzeigen</button>
+
 
     <h2>Letzte erfolgreiche Admin-Logins</h2>
+
     <table id="successful-logins-table">
+
         <thead>
+
         <tr>
+
             <th>IP-Adresse</th>
+
             <th>Benutzername</th>
+
             <th>Zeitpunkt</th>
+
         </tr>
+
         </thead>
+
         <tbody>
+
         </tbody>
+
     </table>
-    <button id="show-all-successful-logins-btn" class="show-all-btn">Alle Einträge anzeigen</button>
+
 
     <h2>Letzte erfolgreiche Admin-Logouts</h2>
+
     <table id="successful-logouts-table">
+
         <thead>
+
         <tr>
+
             <th>IP-Adresse</th>
+
             <th>Benutzername</th>
+
             <th>Zeitpunkt</th>
+
         </tr>
+
         </thead>
+
         <tbody>
+
         </tbody>
+
     </table>
-    <button id="show-all-successful-logouts-btn" class="show-all-btn">Alle Einträge anzeigen</button>
 
     <h2 class="section-title">Gewinnspiel-Teilnehmer</h2>
+
     <table id="giveaway-participants-table">
+
         <thead>
+
         <tr>
+
             <th>Name</th>
+
             <th>E-Mail</th>
+
             <th>Adresse</th>
+
             <th>Zeitpunkt der Teilnahme</th>
+
         </tr>
+
         </thead>
+
         <tbody>
+
         </tbody>
+
     </table>
-    <button id="show-all-giveaway-participants-btn" class="show-all-btn">Alle Einträge anzeigen</button>
+
 </div>
 
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script src="/js/admin.js"></script>
+
 </body>
+
 </html>

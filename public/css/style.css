@@ -315,20 +315,3 @@ h2 {
         margin: 0 10px;
     }
 }
-/* Stil für die "Mehr anzeigen"-Buttons */
-.show-all-btn {
-    display: none; /* Standardmäßig ausblenden, wird per JS eingeblendet, wenn mehr als 20 Einträge vorhanden sind */
-    margin: 15px auto;
-    padding: 10px 20px;
-    background-color: #007bff; /* Ein ansprechendes Blau */
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-.show-all-btn:hover {
-    background-color: #0056b3; /* Dunkleres Blau beim Hover */
-}
