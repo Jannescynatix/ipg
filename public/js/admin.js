@@ -40,6 +40,38 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login';
 
     });
+    // ... (bestehender Code) ...
+
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    clearDataBtn.addEventListener('click', async () => {
+        // Bestätigungsdialog für den Benutzer
+        const confirmClear = confirm("Bist du sicher, dass du alle Besuchsdaten und Gewinnspielteilnehmer löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden!");
+
+        if (confirmClear) {
+            try {
+                const response = await fetch('/api/dashboard/clear-data', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    alert("Die ausgewählten Daten wurden erfolgreich gelöscht.");
+                    // Dashboard neu laden, um die leeren Listen anzuzeigen
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Fehler beim Löschen der Daten: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Fehler beim Senden der Löschanfrage:', error);
+                alert('Ein unerwarteter Fehler ist aufgetreten.');
+            }
+        }
+    });
+
+// ... (Restlicher bestehender Code) ...
 
 
     const fetchDashboardData = async () => {

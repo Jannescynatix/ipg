@@ -80,7 +80,7 @@ async function createAdminUsers() {
     try {
         const adminUsers = [
             { username: 'jannesadmin', password: process.env.ADMIN_PASSWORD },
-            { username: 'maxadmin', password: process.env.ADMIN_PASSWORD_2 } // NEU: Zweiter Admin
+            { username: 'maxadmin', password: process.env.ADMIN_PASSWORD_2 }
         ];
 
         for (const admin of adminUsers) {
@@ -96,7 +96,7 @@ async function createAdminUsers() {
         console.error('Fehler beim Erstellen der Admin-Benutzer:', err);
     }
 }
-createAdminUsers(); // Funktion aufrufen, um alle Admins zu erstellen
+createAdminUsers();
 
 // JWT-Middleware zur Authentifizierung
 const authenticateToken = (req, res, next) => {
@@ -251,7 +251,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 
 app.get('/api/failed-logins', authenticateToken, async (req, res) => {
     try {
-        const failedLogins = await FailedLogin.find().sort({ timestamp: -1 }).limit(10);
+        const failedLogins = await FailedLogin.find().sort({ timestamp: -1 });
         res.json(failedLogins);
     } catch (error) {
         console.error('Fehler beim Abrufen der fehlgeschlagenen Logins:', error);
@@ -261,7 +261,7 @@ app.get('/api/failed-logins', authenticateToken, async (req, res) => {
 
 app.get('/api/successful-logins', authenticateToken, async (req, res) => {
     try {
-        const successfulLogins = await SuccessfulLogin.find().sort({ timestamp: -1 }).limit(10);
+        const successfulLogins = await SuccessfulLogin.find().sort({ timestamp: -1 });
         res.json(successfulLogins);
     } catch (error) {
         console.error('Fehler beim Abrufen der erfolgreichen Logins:', error);
@@ -271,7 +271,7 @@ app.get('/api/successful-logins', authenticateToken, async (req, res) => {
 
 app.get('/api/successful-logouts', authenticateToken, async (req, res) => {
     try {
-        const successfulLogouts = await SuccessfulLogout.find().sort({ timestamp: -1 }).limit(10);
+        const successfulLogouts = await SuccessfulLogout.find().sort({ timestamp: -1 });
         res.json(successfulLogouts);
     } catch (error) {
         console.error('Fehler beim Abrufen der erfolgreichen Logouts:', error);
@@ -304,6 +304,33 @@ app.get('/api/giveaway-participants', authenticateToken, async (req, res) => {
         res.status(500).send('Fehler beim Abrufen der Daten.');
     }
 });
+
+// NEU: Endpunkt zum Löschen bestimmter Daten
+app.delete('/api/dashboard/clear-data', authenticateToken, async (req, res) => {
+    try {
+        // Lösche die Besuchsdaten
+        await Visit.deleteMany({});
+
+        // Lösche die fehlgeschlagenen Logins
+        await FailedLogin.deleteMany({});
+
+        // Lösche die erfolgreichen Logins
+        await SuccessfulLogin.deleteMany({});
+
+        // Lösche die erfolgreichen Logouts
+        await SuccessfulLogout.deleteMany({});
+
+        // Lösche die Gewinnspiel-Teilnehmer
+        await GiveawayParticipant.deleteMany({});
+
+        // Sende eine Erfolgsantwort
+        res.status(200).json({ message: 'Ausgewählte Daten wurden erfolgreich gelöscht.' });
+    } catch (error) {
+        console.error('Fehler beim Löschen der Daten:', error);
+        res.status(500).json({ message: 'Fehler beim Löschen der Daten.' });
+    }
+});
+
 
 // ---
 // Statische Dateien servieren
