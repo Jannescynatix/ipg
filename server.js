@@ -161,7 +161,7 @@ app.post('/api/login', async (req, res) => {
         });
 
         const MAX_ATTEMPTS = 5;
-        const BLOCK_DURATION_MINUTES = 30;
+        const BLOCK_DURATION_MINUTES = 1;
 
         if (failedAttemptsCount >= MAX_ATTEMPTS) {
             await BlockedIp.findOneAndUpdate(
