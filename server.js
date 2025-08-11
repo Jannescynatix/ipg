@@ -79,8 +79,8 @@ const BlockedIp = mongoose.model('BlockedIp', blockedIpSchema);
 async function createAdminUsers() {
     try {
         const adminUsers = [
-            { username: 'admin', password: process.env.ADMIN_PASSWORD },
-            { username: 'zweiteradmin', password: process.env.ADMIN_PASSWORD_2 } // NEU: Zweiter Admin
+            { username: 'jannesadmin', password: process.env.ADMIN_PASSWORD },
+            { username: 'maxadmin', password: process.env.ADMIN_PASSWORD_2 } // NEU: Zweiter Admin
         ];
 
         for (const admin of adminUsers) {
